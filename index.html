@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050b18">
+<meta name="description" content="Інтерактивний навчальний атлас зір, еволюції зір та Сонячної системи з 3D-анімаціями">
+<title>STELLAR ATLAS — Досліджуй зорі та Сонячну систему</title>
+<link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+<div class="application" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-mark"><span></span></div><div><span class="brand-name">STELLAR<span>ATLAS</span></span><div class="brand-subtitle">ІНТЕРАКТИВНА АСТРОНОМІЯ</div></div></div>
+    <div class="sidebar-heading"><span>БІБЛІОТЕКА ЗІР</span><span class="count-pill" id="starCount">9 ЗІР</span></div>
+    <div class="search-box"><span class="search-icon">⌕</span><input id="searchStars" type="search" placeholder="Знайти зорю..." autocomplete="off" aria-label="Пошук зорі"><kbd>/</kbd></div>
+    <div class="filters" id="starFilters" aria-label="Фільтри зір"><button class="filter active" data-filter="all">Усі</button><button class="filter" data-filter="main">Головна посл.</button><button class="filter" data-filter="giant">Гіганти</button><button class="filter" data-filter="remnant">Залишки</button></div>
+    <div class="star-list" id="starList" role="list"></div>
+    <div class="sidebar-foot"><span class="tiny-orbit">◎</span><span>Освітня 3D-модель · Версія 2.0<br><strong>Числа й сценарії мають навчальні обмеження</strong></span></div>
+  </aside>
+  <main class="workspace">
+    <div class="viewport" id="viewport"><div class="scene-loading" id="sceneLoading"><div class="loading-orbit"></div><strong>Створюємо космічну сцену…</strong><span>Ініціалізація 3D-моделей</span></div></div>
+    <div class="topbar">
+      <button class="icon-button mobile-menu" id="menuBtn" aria-label="Відкрити каталог">☰</button>
+      <div class="section-path"><span class="blue-dot"></span><span>ОСВІТНЯ ЛАБОРАТОРІЯ</span><span class="path-slash">/</span><strong id="currentModeText">Сонячна система</strong></div>
+      <div class="top-actions"><div class="connection-dot"></div><span class="top-online">3D-СЦЕНА</span><button class="icon-button" id="resetCamera" title="Скинути ракурс" aria-label="Скинути ракурс">⌖</button><button class="icon-button" id="fullScreen" title="Повний екран" aria-label="Повний екран">⛶</button></div>
+    </div>
+    <div class="mode-tabs" role="group" aria-label="Режим перегляду"><button id="solarBtn" class="mode-tab active" data-mode="solar"><span>◉</span> Сонячна система</button><button id="evolutionBtn" class="mode-tab" data-mode="evolution"><span>◌</span> Еволюція зорі</button></div>
+    <div class="headline"><div class="eyebrow" id="sceneEyebrow">ДОСЛІДЖУЙ КОСМОС</div><h1 id="sceneTitle">Наша Сонячна система<span class="headline-point">.</span></h1><p id="sceneSubtitle">Сонце, вісім планет та їхні орбіти в інтерактивному 3D-просторі.</p></div>
+    <div class="scene-help"><span>↔ Перетягніть для огляду</span><span>⌕ Колесо миші — масштаб</span><span>✧ Оберіть планету</span></div>
+    <div class="planet-strip" id="planetStrip" aria-label="Планети Сонячної системи"></div>
+    <div class="inspector" id="inspector">
+      <div class="inspector-header"><div class="inspector-icon" id="inspectorIcon">☀</div><div class="inspector-text"><small id="inspectorEyebrow">ОБРАНИЙ ОБ'ЄКТ</small><h2 id="inspectorName">Сонце</h2><div id="inspectorType" class="inspector-type">Жовтий карлик · G2V</div></div><button class="minimize" id="toggleInspector" title="Згорнути панель" aria-label="Згорнути або розгорнути відомості">−</button></div>
+      <div class="inspector-body" id="inspectorBody"><div id="statsGrid" class="stats-grid"></div><p id="inspectorDescription" class="inspector-description"></p><details id="extendedInfo" class="mini-details"><summary>Науковий коментар <span>⌄</span></summary><p id="inspectorExtra"></p></details></div>
+    </div>
+    <div class="hr-widget" id="hrWidget"><details id="hrDetails"><summary><span><span class="tiny-chart">▤</span> Діаграма Герцшпрунга—Рассела</span><span class="details-chevron">⌄</span></summary><div class="hr-chart-container"><canvas id="hrCanvas" aria-label="Діаграма світності та температури зір" role="img"></canvas></div><div class="hr-hint">● поточна зоря &nbsp; ◯ умовний етап еволюції<br>Клацніть на точку, щоб вибрати зорю.</div></details></div>
+    <section class="bottom-dock" id="bottomDock">
+      <div class="dock-head"><div class="dock-heading"><span class="dock-overline" id="dockOverline">ОРБІТАЛЬНА СИМУЛЯЦІЯ</span><strong id="dockTitle">Рух планет</strong></div><div class="dock-actions"><select class="evolution-speed hidden" id="evolutionSpeed" aria-label="Швидкість еволюційної анімації"><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select><button class="round-play" id="playButton" title="Пауза / відтворення" aria-label="Пауза або відтворення">Ⅱ</button><button class="subtle-button" id="resetButton">↺ <span>Спочатку</span></button></div></div>
+      <div class="evolution-display hidden" id="evolutionDisplay"><span id="stageNumber">ЕТАП 1 / 7</span><strong id="stageName">Молекулярна хмара</strong><p id="stageDescription"></p></div>
+      <div class="slider-line" id="timelineRow"><div class="slider-caption"><label for="mainSlider" id="sliderLabel">ШВИДКІСТЬ ОБЕРТАННЯ</label><span class="slider-number" id="sliderValue">×1.0</span></div><input type="range" id="mainSlider" min="0" max="5" value="1" step="0.1"><div class="slider-endpoints" id="sliderEndpoints"><span>Пауза</span><span>Прискорення ×5</span></div></div>
+      <div class="evolution-note hidden" id="evolutionNote">ⓘ Шкала етапів умовна, не відповідає рівним часовим проміжкам. Це навчальний сценарій, а не індивідуальний прогноз.</div>
+    </section>
+    <div class="scale-note" id="scaleNote">Відстані, розміри та швидкості в 3D-сцені не збережені в одному масштабі.</div>
+  </main>
+</div>
+<div class="overlay" id="mobileOverlay" hidden></div>
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>
