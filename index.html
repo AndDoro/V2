@@ -5,18 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#050b18">
 <meta name="description" content="Інтерактивний навчальний атлас зір, еволюції зір та Сонячної системи з 3D-анімаціями">
-<title>STELLAR ATLAS — Досліджуй зорі та Сонячну систему</title>
+<title>АСТРОСФЕРА — інтерактивна лабораторія Всесвіту</title>
 <link rel="stylesheet" href="./assets/styles.css">
 </head>
 <body>
 <div class="application" id="app">
   <aside class="sidebar" id="sidebar">
-    <div class="brand"><div class="brand-mark"><span></span></div><div><span class="brand-name">STELLAR<span>ATLAS</span></span><div class="brand-subtitle">ІНТЕРАКТИВНА АСТРОНОМІЯ</div></div></div>
-    <div class="sidebar-heading"><span>БІБЛІОТЕКА ЗІР</span><span class="count-pill" id="starCount">9 ЗІР</span></div>
+    <div class="brand"><div class="brand-mark"><span></span></div><div><span class="brand-name">АСТРО<span>СФЕРА</span></span><div class="brand-subtitle">ІНТЕРАКТИВНА ЛАБОРАТОРІЯ ВСЕСВІТУ</div></div></div>
+    <div class="sidebar-heading"><span>БІБЛІОТЕКА ЗІР</span><span class="count-pill" id="starCount">9 ОБ’ЄКТІВ</span></div>
     <div class="search-box"><span class="search-icon">⌕</span><input id="searchStars" type="search" placeholder="Знайти зорю..." autocomplete="off" aria-label="Пошук зорі"><kbd>/</kbd></div>
-    <div class="filters" id="starFilters" aria-label="Фільтри зір"><button class="filter active" data-filter="all">Усі</button><button class="filter" data-filter="main">Головна посл.</button><button class="filter" data-filter="giant">Гіганти</button><button class="filter" data-filter="remnant">Залишки</button></div>
+    <div class="filters" id="starFilters" aria-label="Фільтри зір"><button class="filter active" data-filter="all">Усі</button><button class="filter" data-filter="named">Іменовані</button><button class="filter" data-filter="main">Головна посл.</button><button class="filter" data-filter="giant">Гіганти</button><button class="filter" data-filter="remnant">Залишки</button></div>
     <div class="star-list" id="starList" role="list"></div>
-    <div class="sidebar-foot"><span class="tiny-orbit">◎</span><span>Освітня 3D-модель · Версія 2.0<br><strong>Числа й сценарії мають навчальні обмеження</strong></span></div>
+    <div class="catalog-tools"><button id="loadCatalog" class="catalog-load" type="button">✧ Завантажити великий каталог HYG</button><div id="catalogStatus" class="catalog-status" role="status" aria-live="polite">590 локальних записів · додатково ≈120 тис. записів HYG 4.0</div><a class="gaia-link" href="https://gea.esac.esa.int/archive/" target="_blank" rel="noopener noreferrer">Відкрити науковий архів Gaia ↗</a></div>
+    <div class="sidebar-foot"><span class="tiny-orbit">◎</span><span>Астросфера · Версія 3.0<br><strong>Числа й сценарії мають навчальні обмеження</strong></span></div>
   </aside>
   <main class="workspace">
     <div class="viewport" id="viewport"><div class="scene-loading" id="sceneLoading"><div class="loading-orbit"></div><strong>Створюємо космічну сцену…</strong><span>Ініціалізація 3D-моделей</span></div></div>
@@ -27,7 +28,8 @@
     </div>
     <div class="mode-tabs" role="group" aria-label="Режим перегляду"><button id="solarBtn" class="mode-tab active" data-mode="solar"><span>◉</span> Сонячна система</button><button id="evolutionBtn" class="mode-tab" data-mode="evolution"><span>◌</span> Еволюція зорі</button></div>
     <div class="headline"><div class="eyebrow" id="sceneEyebrow">ДОСЛІДЖУЙ КОСМОС</div><h1 id="sceneTitle">Наша Сонячна система<span class="headline-point">.</span></h1><p id="sceneSubtitle">Сонце, вісім планет та їхні орбіти в інтерактивному 3D-просторі.</p></div>
-    <div class="scene-help"><span>↔ Перетягніть для огляду</span><span>⌕ Колесо миші — масштаб</span><span>✧ Оберіть планету</span></div>
+    <div class="scene-help"><span>↔ Перетягування: огляд</span><span>◉ Колесо: масштаб</span><span>✧ Клік: вибір об’єкта</span></div>
+    <div class="camera-controls" aria-label="Керування 3D-сценою"><div class="control-heading">КЕРУВАННЯ 3D</div><div class="camera-buttons"><button id="rotateLeft" aria-label="Повернути камеру вліво" title="Повернути вліво">↶</button><button id="zoomIn" aria-label="Наблизити" title="Наблизити">＋</button><button id="zoomOut" aria-label="Віддалити" title="Віддалити">−</button><button id="rotateRight" aria-label="Повернути вправо" title="Повернути вправо">↷</button><button id="cameraHome" aria-label="Повернути початковий ракурс" title="Початковий ракурс">⌂</button></div><span>Миша · дотик · кнопки</span></div>
     <div class="planet-strip" id="planetStrip" aria-label="Планети Сонячної системи"></div>
     <div class="inspector" id="inspector">
       <div class="inspector-header"><div class="inspector-icon" id="inspectorIcon">☀</div><div class="inspector-text"><small id="inspectorEyebrow">ОБРАНИЙ ОБ'ЄКТ</small><h2 id="inspectorName">Сонце</h2><div id="inspectorType" class="inspector-type">Жовтий карлик · G2V</div></div><button class="minimize" id="toggleInspector" title="Згорнути панель" aria-label="Згорнути або розгорнути відомості">−</button></div>
@@ -35,10 +37,11 @@
     </div>
     <div class="hr-widget" id="hrWidget"><details id="hrDetails"><summary><span><span class="tiny-chart">▤</span> Діаграма Герцшпрунга—Рассела</span><span class="details-chevron">⌄</span></summary><div class="hr-chart-container"><canvas id="hrCanvas" aria-label="Діаграма світності та температури зір" role="img"></canvas></div><div class="hr-hint">● поточна зоря &nbsp; ◯ умовний етап еволюції<br>Клацніть на точку, щоб вибрати зорю.</div></details></div>
     <section class="bottom-dock" id="bottomDock">
-      <div class="dock-head"><div class="dock-heading"><span class="dock-overline" id="dockOverline">ОРБІТАЛЬНА СИМУЛЯЦІЯ</span><strong id="dockTitle">Рух планет</strong></div><div class="dock-actions"><select class="evolution-speed hidden" id="evolutionSpeed" aria-label="Швидкість еволюційної анімації"><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select><button class="round-play" id="playButton" title="Пауза / відтворення" aria-label="Пауза або відтворення">Ⅱ</button><button class="subtle-button" id="resetButton">↺ <span>Спочатку</span></button></div></div>
+      <div class="dock-head"><div class="dock-heading"><span class="dock-overline" id="dockOverline">ОРБІТАЛЬНА СИМУЛЯЦІЯ</span><strong id="dockTitle">Рух планет</strong></div><div class="dock-actions"><select class="evolution-speed hidden" id="evolutionSpeed" aria-label="Швидкість еволюційної анімації"><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select><button class="round-play" id="playButton" title="Пауза / відтворення" aria-label="Пауза або відтворення">❚❚</button><button class="subtle-button" id="resetButton">↺ <span>Спочатку</span></button></div></div>
       <div class="evolution-display hidden" id="evolutionDisplay"><span id="stageNumber">ЕТАП 1 / 7</span><strong id="stageName">Молекулярна хмара</strong><p id="stageDescription"></p></div>
-      <div class="slider-line" id="timelineRow"><div class="slider-caption"><label for="mainSlider" id="sliderLabel">ШВИДКІСТЬ ОБЕРТАННЯ</label><span class="slider-number" id="sliderValue">×1.0</span></div><input type="range" id="mainSlider" min="0" max="5" value="1" step="0.1"><div class="slider-endpoints" id="sliderEndpoints"><span>Пауза</span><span>Прискорення ×5</span></div></div>
-      <div class="evolution-note hidden" id="evolutionNote">ⓘ Шкала етапів умовна, не відповідає рівним часовим проміжкам. Це навчальний сценарій, а не індивідуальний прогноз.</div>
+      <div class="stage-navigation hidden" id="stageNavigation"><button id="prevStage" type="button" aria-label="Попередній етап">← Попередній</button><div class="stage-pips" id="stagePips" aria-label="Етапи еволюції"></div><button id="nextStage" type="button" aria-label="Наступний етап">Наступний →</button></div>
+      <div class="slider-line" id="timelineRow"><div class="slider-caption"><label for="mainSlider" id="sliderLabel">ШВИДКІСТЬ ОБЕРТАННЯ</label><output class="slider-number" id="sliderValue" for="mainSlider">×1.0</output></div><input type="range" id="mainSlider" min="0" max="5" value="1" step="0.1"><div class="slider-endpoints" id="sliderEndpoints"><span>Пауза</span><span>Прискорення ×5</span></div></div>
+      <details class="evolution-note hidden" id="evolutionNote"><summary>ⓘ Межі навчальної моделі</summary><p id="evolutionNoteText">Етапи умовні, нерівні за реальною тривалістю. Це навчальна схема, а не індивідуальний прогноз.</p></details>
     </section>
     <div class="scale-note" id="scaleNote">Відстані, розміри та швидкості в 3D-сцені не збережені в одному масштабі.</div>
   </main>

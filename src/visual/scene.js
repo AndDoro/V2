@@ -83,7 +83,7 @@ function orbitLine(radius,color='#597a9d',opacity=.29){
 export class StarScene{
  constructor(container, onPlanet){
   this.container=container;this.onPlanet=onPlanet;this.mode='solar';this.speed=1;this.elapsed=0;this.focusPlanet=null;this.labels=[];
-  this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#020611');
+  this.visualKind='main';this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#020611');
   this.scene.fog=new THREE.FogExp2('#020611',.0014);
   this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
   this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.8));this.renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -149,6 +149,27 @@ export class StarScene{
   const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(diskPos,3));dg.setAttribute('color',new THREE.BufferAttribute(diskCol,3));
   this.disk=new THREE.Points(dg,new THREE.PointsMaterial({size:.12,vertexColors:true,transparent:true,opacity:.65,depthWrite:false,blending:THREE.AdditiveBlending}));
   this.scene.add(this.disk);this.disk.visible=false;
+  // Own procedural material and particle systems: no third-party art assets.
+  this.plasma=new THREE.Group();this.scene.add(this.plasma);
+  const flareCount=1150,flarePos=new Float32Array(flareCount*3),flareColors=new Float32Array(flareCount*3);
+  for(let i=0;i<flareCount;i++){
+   const a=rand()*Math.PI*2,z=rand()*2-1,rr=Math.sqrt(1-z*z),radius=1.03+rand()*.24;
+   flarePos[i*3]=Math.cos(a)*rr*radius;flarePos[i*3+1]=z*radius;flarePos[i*3+2]=Math.sin(a)*rr*radius;
+   const c=new THREE.Color(rand()>.5?'#fff3c0':'#ff9755');flareColors[i*3]=c.r;flareColors[i*3+1]=c.g;flareColors[i*3+2]=c.b;
+  }
+  const flameGeometry=new THREE.BufferGeometry();flameGeometry.setAttribute('position',new THREE.BufferAttribute(flarePos,3));flameGeometry.setAttribute('color',new THREE.BufferAttribute(flareColors,3));
+  this.flares=new THREE.Points(flameGeometry,new THREE.PointsMaterial({size:.035,vertexColors:true,transparent:true,opacity:.78,sizeAttenuation:true,depthWrite:false,blending:THREE.AdditiveBlending}));this.plasma.add(this.flares);
+  this.flareGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlowTexture(),color:'#ff9e54',transparent:true,opacity:.38,depthWrite:false,blending:THREE.AdditiveBlending}));this.plasma.add(this.flareGlow);
+  this.dustGlows=[];
+  const dustColors=['#5eb9ff','#9c70ff','#ef73a6','#63ffee','#ffa46e'];
+  for(let i=0;i<5;i++){
+   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlowTexture(),color:dustColors[i],transparent:true,opacity:.09,depthWrite:false,blending:THREE.AdditiveBlending}));
+   sprite.position.set(Math.cos(i*2.4)*2.3,Math.sin(i*1.8)*1.1,Math.sin(i*2.4)*2.4);sprite.scale.setScalar(4.5+i*.8);this.nebula.add(sprite);this.dustGlows.push(sprite);
+  }
+  this.shockwave=new THREE.Mesh(new THREE.RingGeometry(1,1.085,192),new THREE.MeshBasicMaterial({color:'#aff2ff',transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+  this.shockwave.rotation.x=-.27;this.scene.add(this.shockwave);this.shockwave.visible=false;
+  this.shockwave2=new THREE.Mesh(new THREE.RingGeometry(1,1.035,192),new THREE.MeshBasicMaterial({color:'#ffbe84',transparent:true,opacity:.58,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+  this.shockwave2.rotation.y=.45;this.scene.add(this.shockwave2);this.shockwave2.visible=false;
  }
  createSystem(){
   this.system=new THREE.Group();this.scene.add(this.system);this.planets=[];this.pickMeshes=[];
@@ -203,7 +224,7 @@ export class StarScene{
    this.azimuth=start.az-dx*.004;this.polar=clamp(start.polar+dy*.004,.14,Math.PI-.14);
   });
   el.addEventListener('pointerup',e=>{
-   if(start&&!start.moved){const box=el.getBoundingClientRect();
+   if(start&&!start.moved&&this.mode==='solar'){const box=el.getBoundingClientRect();
     const p=new THREE.Vector2(((e.clientX-box.left)/box.width)*2-1,-((e.clientY-box.top)/box.height)*2+1);
     const ray=new THREE.Raycaster();ray.setFromCamera(p,this.camera);const hits=ray.intersectObjects(this.pickMeshes,false);
     if(hits.length)this.onPlanet(hits[0].object.userData.planetId);
@@ -219,14 +240,20 @@ export class StarScene{
   const radius=preview?.radius??s.radius;
   const color=preview?.visual==='nebula'?'#b5f7ff':preview?.visual==='supernova'?'#fff2bd':s.color;
   let visualRadius= s.id==='sun'&&!preview?1.85:clamp(1.05+Math.log10(Math.max(.004,radius))*.72,.52,4.5);
-  if(preview?.visual==='supernova')visualRadius=4.3;
+  if(preview?.visual==='supernova')visualRadius=3.3;
   if(preview?.visual==='cloud')visualRadius=.32;
   if(preview?.visual==='nebula')visualRadius=.58;
+  this.visualKind=preview?.visual||'main';
   if(this.nebula){
    this.nebula.visible=this.mode==='evolution'&&['cloud','nebula','supernova'].includes(preview?.visual);
    this.nebula.scale.setScalar(preview?.visual==='supernova'?1.6:(preview?.visual==='nebula'?1.15:1));
    this.nebula.material.opacity=preview?.visual==='supernova'?.96:.67;
    this.disk.visible=this.mode==='evolution'&&preview?.visual==='proto';
+   this.plasma.visible=this.visualKind!=='cloud'&&this.visualKind!=='nebula'&&this.visualKind!=='remnant';
+   this.plasma.scale.setScalar(visualRadius*1.1);this.flareGlow.scale.setScalar(visualRadius*5.4);
+   this.flareGlow.material.color.set(color);this.flares.material.opacity=this.visualKind==='supernova'?1:.7;
+   this.shockwave.visible=this.mode==='evolution'&&this.visualKind==='supernova';
+   this.shockwave2.visible=this.shockwave.visible;
   }
   this.core.scale.setScalar(visualRadius);this.corona.scale.setScalar(visualRadius);
   this.halo.scale.set(visualRadius*4.9,visualRadius*4.9,1);
@@ -235,7 +262,7 @@ export class StarScene{
   this.coronaMaterial.uniforms.uTint.value.set(color);
   this.halo.material.color.set(color);
   this.sunLight.color.set(color);
-  this.sunLight.intensity=this.mode==='solar'?110:75;
+  this.sunLight.intensity=this.mode==='solar'?115:(this.visualKind==='supernova'?165:92);
   this.currentVisualRadius=visualRadius;
  }
  setMode(mode){
@@ -251,7 +278,9 @@ export class StarScene{
   p.mesh.getWorldPosition(this.desiredTarget);this.focusPlanet=id;
   this.desiredDistance=clamp(p.data.visualRadius*9,4.3,11);
  }
- setOrbitSpeed(v){this.speed=v;}
+ setOrbitSpeed(v){this.speed=clamp(Number(v)||0,0,5);}
+ rotate(amount){this.azimuth+=amount;}
+ zoom(factor){this.desiredDistance=clamp(this.desiredDistance*factor,3.2,this.mode==='solar'?145:100);}
  updateLabels(){
   if(this.mode!=='solar')return;
   const w=this.container.clientWidth,h=this.container.clientHeight;
@@ -267,7 +296,21 @@ export class StarScene{
  animate(now){
   const dt=Math.min((now-this.lastTime)/1000,.06);this.lastTime=now;this.elapsed+=dt;
   this.coreMaterial.uniforms.uTime.value=this.elapsed;this.coronaMaterial.uniforms.uTime.value=this.elapsed;
-  this.core.rotation.y+=dt*.065;this.starfield.rotation.y+=dt*.00027;
+  this.core.rotation.y+=dt*.065;this.starfield.rotation.y+=dt*.00032;
+  this.starfield.material.opacity=.77+.11*Math.sin(this.elapsed*.9);
+  if(this.plasma){
+   this.plasma.rotation.y+=dt*.13;this.plasma.rotation.z+=dt*.019;
+   this.flareGlow.material.opacity=.28+.10*Math.sin(this.elapsed*2.0);
+   this.corona.material.uniforms.uTime.value=this.elapsed;
+   this.halo.material.opacity=.63+.09*Math.sin(this.elapsed*1.55);
+   if(this.visualKind==='giant'){const pulse=1+.025*Math.sin(this.elapsed*.8);this.core.scale.setScalar(this.currentVisualRadius*pulse);this.corona.scale.setScalar(this.currentVisualRadius*pulse);}
+  }
+  if(this.shockwave?.visible){
+   const cycle=(this.elapsed*.18)%1;
+   this.shockwave.scale.setScalar(2+cycle*13);this.shockwave.material.opacity=.8*(1-cycle);
+   const cycle2=(cycle+.48)%1;this.shockwave2.scale.setScalar(1.6+cycle2*12);this.shockwave2.material.opacity=.52*(1-cycle2);
+   this.shockwave.rotation.z+=dt*.15;this.shockwave2.rotation.z-=dt*.1;
+  }
   if(this.nebula?.visible){this.nebula.rotation.y+=dt*.011;this.nebula.rotation.z+=dt*.003;}
   if(this.disk?.visible)this.disk.rotation.y+=dt*.065;
   if(this.mode==='solar'){

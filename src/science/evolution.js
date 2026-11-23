@@ -29,7 +29,10 @@ const remnant = [
  {at:45,stage:'Охолодження',text:'Білий карлик поступово випромінює накопичене тепло і стає тьмянішим.',temp:25000,luminosity:.05,radius:.008,visual:'remnant'},
  {at:100,stage:'Дуже холодний залишок',text:'Умовний дуже віддалений фінал: чорні карлики поки не могли сформуватися за час існування Всесвіту.',temp:3000,luminosity:.000001,radius:.008,visual:'remnant'}
 ];
-const PATHS={solar,dwarf,massive,remnant};
+const unknown = [
+ {at:0,stage:'Фізичні параметри невідомі',text:'Це іменована зоря з довідкового індексу назв. Для побудови навчального сценарію потрібен спектральний тип. Спробуйте завантажити HYG.',temp:5700,luminosity:1,radius:1,visual:'unknown'}
+];
+const PATHS={solar,dwarf,massive,remnant,unknown};
 export function getTrack(star){ return PATHS[star.track] || solar; }
 export function getStage(star, progress) {
  const track=getTrack(star), p=Math.max(0,Math.min(100,progress));

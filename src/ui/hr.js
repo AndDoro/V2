@@ -1,9 +1,9 @@
 import {STARS} from '../data/stars.js';
 export class HRDiagram{
  constructor(canvas,onSelect){this.canvas=canvas;this.onSelect=onSelect;this.selected='sun';this.preview=null;this.ctx=canvas.getContext('2d');
-  this.resizeObserver=new ResizeObserver(()=>this.draw());this.resizeObserver.observe(canvas.parentElement);
+  this.lastDraw=0;this.resizeObserver=new ResizeObserver(()=>this.draw());this.resizeObserver.observe(canvas.parentElement);
   canvas.addEventListener('click',e=>{const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
-   const nearest=STARS.map(s=>({s,p:this.point(s.temp,s.luminosity,r.width,r.height)})).sort((a,b)=>Math.hypot(a.p.x-x,a.p.y-y)-Math.hypot(b.p.x-x,b.p.y-y))[0];
+   const pool=this.plotStars().filter(s=>s.temp>0&&s.luminosity>0);const nearest=pool.map(s=>({s,p:this.point(s.temp,s.luminosity,r.width,r.height)})).sort((a,b)=>Math.hypot(a.p.x-x,a.p.y-y)-Math.hypot(b.p.x-x,b.p.y-y))[0];
    if(nearest&&Math.hypot(nearest.p.x-x,nearest.p.y-y)<17)this.onSelect(nearest.s.id);
   });
   this.draw();
@@ -13,8 +13,10 @@ export class HRDiagram{
   const y=(6-Math.log10(Math.max(1e-6,Math.min(1e6,L))))/12;
   return {x:left+(right-left)*x,y:top+(bottom-top)*y};
  }
- setState(id,preview){this.selected=id;this.preview=preview;this.draw();}
+ setState(id,preview){this.selected=id;this.preview=preview;if(this.canvas.closest('details')?.open&&performance.now()-this.lastDraw>115)this.draw();}
+ plotStars(){const known=STARS.slice(0,9),added=STARS.slice(9);return known.concat(added.filter((s,i)=>i%Math.max(1,Math.ceil(added.length/750))===0&&s.temp>0&&s.luminosity>0)).concat(STARS.find(s=>s.id===this.selected)||[]);}
  draw(){
+  if(!this.canvas.closest('details')?.open)return;this.lastDraw=performance.now();
   const canvas=this.canvas,box=canvas.getBoundingClientRect(),w=Math.max(240,box.width||280),h=Math.max(190,box.height||220),dpr=Math.min(window.devicePixelRatio||1,2);
   canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
   const c=this.ctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
@@ -36,11 +38,11 @@ export class HRDiagram{
    const p=this.point(T,lum,w,h);if(i===0)c.moveTo(p.x,p.y);else c.lineTo(p.x,p.y);
   }c.strokeStyle='rgba(111,155,240,.20)';c.lineWidth=16;c.stroke();c.restore();
   c.fillStyle='#667fa4';c.textAlign='left';c.font='9px Inter,Arial';c.fillText('НАДГІГАНТИ',l+8,t+13);c.fillText('БІЛІ КАРЛИКИ',l+8,b-9);
-  for(const s of STARS){const p=this.point(s.temp,s.luminosity,w,h),active=s.id===this.selected;
+  for(const s of this.plotStars()){if(!(s.temp>0&&s.luminosity>0))continue;const p=this.point(s.temp,s.luminosity,w,h),active=s.id===this.selected;
    c.beginPath();c.arc(p.x,p.y,active?5.3:3,0,Math.PI*2);c.fillStyle=s.color;c.fill();
    if(active){c.beginPath();c.arc(p.x,p.y,9.3,0,Math.PI*2);c.strokeStyle='#ffffff';c.lineWidth=1.4;c.stroke();}
   }
-  if(this.preview){const p=this.point(this.preview.temp,this.preview.luminosity,w,h);
+  if(this.preview&&this.preview.temp>0&&this.preview.luminosity>0){const p=this.point(this.preview.temp,this.preview.luminosity,w,h);
    c.beginPath();c.arc(p.x,p.y,7,0,Math.PI*2);c.strokeStyle='#66e1f6';c.lineWidth=2;c.stroke();
   }
   c.font='10px Inter,Arial';c.fillStyle='#aec0d8';c.textAlign='center';c.fillText('Температура поверхні, K → нижча',l+(r-l)/2,h-5);
