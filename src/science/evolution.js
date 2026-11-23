@@ -43,3 +43,28 @@ export function getStage(star, progress) {
  const lerpLog=(a,b)=>a*Math.pow(b/a,Math.max(0,Math.min(1,fraction)));
  return {...s, fraction, temp:lerpLog(s.temp,next.temp),luminosity:lerpLog(s.luminosity,next.luminosity),radius:lerpLog(s.radius,next.radius)};
 }
+
+/**
+ * One-star educational H–R path, sampled at uniform increments of *illustrative*
+ * progress. The path does not claim to be the individual star's measured future.
+ * Molecular clouds and unknown spectral types have no meaningful H–R coordinate.
+ */
+export function sampleEvolutionPath(star, progress, density = 100) {
+ const track = getTrack(star);
+ if (star.track === 'unknown' || !track || !track.length) return [];
+ const first = track.find(point => point.visual !== 'cloud');
+ if (!first) return [];
+ const from = first.at;
+ const to = Math.max(0, Math.min(100, Number(progress) || 0));
+ if (to < from) return [];
+ const count = Math.max(1, Math.min(300, Math.round(density * (to - from) / 100)));
+ const points = [];
+ for (let i = 0; i <= count; i++) {
+  const at = from + (to - from) * (i / count);
+  const state = getStage(star, at);
+  if (Number.isFinite(state.temp) && state.temp > 0 && Number.isFinite(state.luminosity) && state.luminosity > 0) {
+   points.push({ at, temp: state.temp, luminosity: state.luminosity });
+  }
+ }
+ return points;
+}

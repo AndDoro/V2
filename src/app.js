@@ -10,7 +10,7 @@ const $=id=>document.getElementById(id);
 const state={mode:'solar',star:STAR_BY_ID.sun,selectedPlanet:null,progress:46,orbitSpeed:1,playing:true,evolutionSpeed:1,filter:'all',search:'',listLimit:60,loading:false};
 const fmt=x=>x==null?'—':fmtNumber(x);
 const starList=$('starList'),planetStrip=$('planetStrip');
-const hr=new HRDiagram($('hrCanvas'),selectStar);
+const hr=new HRDiagram($('hrCanvas'));
 let scene;
 function setPlayState(value){
  state.playing=!!value;
@@ -112,7 +112,7 @@ function updateEvolution(){
  }
  $('prevStage').disabled=idx===0&&state.progress===0;
  $('nextStage').disabled=idx===track.length-1;
- scene.setStarVisual(state.star,stage);hr.setState(state.star.id,stage);
+ scene.setStarVisual(state.star,stage);hr.setState(state.star,state.progress,'evolution');
 }
 function seekStage(i){
  const track=getTrack(state.star),target=track[Math.max(0,Math.min(i,track.length-1))];
@@ -128,6 +128,9 @@ function stepStage(dir){
 }
 function setMode(mode){
  state.mode=mode;
+ document.body.classList.toggle('mode-evolution',mode==='evolution');
+ document.body.classList.toggle('mode-solar',mode==='solar');
+ setMobilePane(null);
  if(mode==='solar'){
   state.star=STAR_BY_ID.sun;state.selectedPlanet=null;
   $('sceneEyebrow').textContent='ВІДКРИВАЙ НАШ КОСМОС';
@@ -140,8 +143,9 @@ function setMode(mode){
   $('sliderValue').textContent='×'+state.orbitSpeed.toFixed(1).replace('.',',');
   $('planetStrip').classList.remove('hidden');$('evolutionDisplay').classList.add('hidden');$('evolutionNote').classList.add('hidden');$('evolutionSpeed').classList.add('hidden');$('stageNavigation').classList.add('hidden');
   $('scaleNote').textContent='Розміри, відстані та тривалість обертів показані не в одному масштабі.';
+  $('mobileScenarioToggle').classList.add('hidden');document.body.classList.remove('mobile-scenario-expanded');$('mobileScenarioToggle').setAttribute('aria-expanded','false');
   scene.setMode('solar');scene.setStarVisual(state.star);setPlayState(true);
-  hr.setState(state.star.id,null);
+  hr.setState(state.star,0,'solar');
  }else{
   const s=state.star;
   $('sceneEyebrow').textContent='НАВЧАЛЬНА МОДЕЛЬ ЕВОЛЮЦІЇ';
@@ -153,6 +157,7 @@ function setMode(mode){
   $('sliderEndpoints').innerHTML='<span>Початок формування</span><span>Умовний фінал</span>';
   $('planetStrip').classList.add('hidden');$('evolutionDisplay').classList.remove('hidden');$('evolutionNote').classList.remove('hidden');$('evolutionSpeed').classList.remove('hidden');$('stageNavigation').classList.remove('hidden');
   $('scaleNote').textContent='Навчальний трек не є фізично точним прогнозом для цієї зорі.';
+  $('mobileScenarioToggle').classList.remove('hidden');document.body.classList.remove('mobile-scenario-expanded');$('mobileScenarioToggle').setAttribute('aria-expanded','false');
   scene.setMode('evolution');buildStagePips();setPlayState(false);updateEvolution();
  }
  paintSlider();
@@ -176,6 +181,17 @@ function togglePlay(){
 }
 function openMobileMenu(){document.body.classList.add('mobile-nav-open');$('mobileOverlay').hidden=false;}
 function closeMobileMenu(){document.body.classList.remove('mobile-nav-open');$('mobileOverlay').hidden=true;}
+function setMobilePane(pane){
+ const valid=['planets','inspector','hr','camera'];
+ const next=valid.includes(pane)?pane:null;
+ for(const type of valid)document.body.classList.toggle('mobile-pane-'+type,next===type);
+ for(const b of document.querySelectorAll('.mobile-quick')){
+  const on=b.dataset.pane===next;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));
+ }
+ if(next==='hr'){$('hrDetails').open=true;hr.requestDraw();}
+ if(next==='inspector'){$('inspector').classList.remove('collapsed');$('toggleInspector').textContent='−';$('toggleInspector').setAttribute('aria-expanded','true');}
+}
+
 try{
  scene=new StarScene($('viewport'),selectPlanet);
  $('sceneLoading').classList.add('hidden');
@@ -221,18 +237,46 @@ $('rotateRight').addEventListener('click',()=>scene.rotate(.3));
 $('zoomIn').addEventListener('click',()=>scene.zoom(.76));
 $('zoomOut').addEventListener('click',()=>scene.zoom(1.3));
 $('fullScreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});});
-$('menuBtn').addEventListener('click',openMobileMenu);$('mobileOverlay').addEventListener('click',closeMobileMenu);
+$('menuBtn').addEventListener('click',()=>{setMobilePane(null);openMobileMenu();});$('mobileOverlay').addEventListener('click',closeMobileMenu);
+for(const button of document.querySelectorAll('.mobile-quick'))button.addEventListener('click',()=>{
+ const next=document.body.classList.contains('mobile-pane-'+button.dataset.pane)?null:button.dataset.pane;
+ setMobilePane(next);
+});
+$('mobileScenarioToggle').addEventListener('click',()=>{
+ const on=document.body.classList.toggle('mobile-scenario-expanded');
+ $('mobileScenarioToggle').setAttribute('aria-expanded',String(on));
+ $('mobileScenarioToggle').textContent=on?'Згорнути ▴':'Етапи ▾';
+});
+$('viewport').addEventListener('pointerdown',()=>{if(window.innerWidth<=730)setMobilePane(null);});
+window.matchMedia('(min-width: 731px)').addEventListener('change',e=>{if(e.matches){setMobilePane(null);closeMobileMenu();}});
+
 $('toggleInspector').addEventListener('click',()=>{
+ if(window.innerWidth>730&&$('hrDetails').open&&$('inspector').classList.contains('collapsed')){
+  inspectorCollapsedByDiagram=false;$('hrDetails').open=false;
+ }
  const col=$('inspector').classList.toggle('collapsed');$('toggleInspector').textContent=col?'+':'−';$('toggleInspector').setAttribute('aria-expanded',String(!col));
 });
-$('hrDetails').addEventListener('toggle',()=>hr.draw());
+let inspectorCollapsedByDiagram=false;
+$('hrDetails').addEventListener('toggle',()=>{
+ if(window.innerWidth>730){
+  const panel=$('inspector'),toggle=$('toggleInspector');
+  if($('hrDetails').open&&!panel.classList.contains('collapsed')){
+   panel.classList.add('collapsed');inspectorCollapsedByDiagram=true;
+   toggle.textContent='+';toggle.setAttribute('aria-expanded','false');
+  }else if(!$('hrDetails').open&&inspectorCollapsedByDiagram){
+   panel.classList.remove('collapsed');inspectorCollapsedByDiagram=false;
+   toggle.textContent='−';toggle.setAttribute('aria-expanded','true');
+  }
+ }
+ hr.requestDraw();
+});
 document.addEventListener('keydown',e=>{
  if(e.target.matches('input,textarea,select')){if(e.key==='Escape')e.target.blur();return;}
  if(e.key==='/'){e.preventDefault();$('searchStars').focus();if(window.innerWidth<730)openMobileMenu();}
  if(e.code==='Space'){e.preventDefault();togglePlay();}
  if(e.key==='ArrowLeft'&&state.mode==='evolution'){e.preventDefault();stepStage(-1);}
  if(e.key==='ArrowRight'&&state.mode==='evolution'){e.preventDefault();stepStage(1);}
- if(e.key==='Escape')closeMobileMenu();
+ if(e.key==='Escape'){closeMobileMenu();setMobilePane(null);}
 });
 let last=performance.now();function tick(now){
  const dt=Math.min((now-last)/1000,.08);last=now;

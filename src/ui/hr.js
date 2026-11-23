@@ -1,51 +1,124 @@
-import {STARS} from '../data/stars.js';
-export class HRDiagram{
- constructor(canvas,onSelect){this.canvas=canvas;this.onSelect=onSelect;this.selected='sun';this.preview=null;this.ctx=canvas.getContext('2d');
-  this.lastDraw=0;this.resizeObserver=new ResizeObserver(()=>this.draw());this.resizeObserver.observe(canvas.parentElement);
-  canvas.addEventListener('click',e=>{const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
-   const pool=this.plotStars().filter(s=>s.temp>0&&s.luminosity>0);const nearest=pool.map(s=>({s,p:this.point(s.temp,s.luminosity,r.width,r.height)})).sort((a,b)=>Math.hypot(a.p.x-x,a.p.y-y)-Math.hypot(b.p.x-x,b.p.y-y))[0];
-   if(nearest&&Math.hypot(nearest.p.x-x,nearest.p.y-y)<17)this.onSelect(nearest.s.id);
-  });
-  this.draw();
+import {sampleEvolutionPath, getTrack} from '../science/evolution.js';
+
+// Astronomical convention: surface temperature decreases to the right.
+// Every mark in this chart belongs to ONE selected object's illustrative track.
+const AXES = {
+ solar:   {loT:2400,hiT:70000,loL:1e-5,hiL:1e6},
+ dwarf:   {loT:2300,hiT:30000,loL:1e-6,hiL:1e1},
+ massive: {loT:2900,hiT:650000,loL:1e-5,hiL:1e7},
+ remnant: {loT:2500,hiT:100000,loL:1e-7,hiL:1e2},
+ unknown: {loT:2500,hiT:60000,loL:1e-7,hiL:1e6}
+};
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const formatValue=n=>n>=1000?Math.round(n).toLocaleString('uk-UA'):n>=1?Number(n.toPrecision(3)).toLocaleString('uk-UA'):n.toExponential(1).replace('e','×10^');
+
+export class HRDiagram {
+ constructor(canvas) {
+  this.canvas=canvas;
+  this.ctx=canvas.getContext('2d');
+  this.star=null;
+  this.progress=0;
+  this.mode='solar';
+  this.frame=0;
+  this.details=canvas.closest('details');
+  this.resizeObserver=new ResizeObserver(()=>this.requestDraw());
+  this.resizeObserver.observe(canvas.parentElement);
+  this.details?.addEventListener('toggle',()=>this.requestDraw());
+  this.requestDraw();
  }
- point(T,L,w,h){const left=39,right=w-12,top=19,bottom=h-32;
-  const x=(Math.log10(50000)-Math.log10(Math.max(2500,Math.min(50000,T))))/(Math.log10(50000)-Math.log10(2500));
-  const y=(6-Math.log10(Math.max(1e-6,Math.min(1e6,L))))/12;
-  return {x:left+(right-left)*x,y:top+(bottom-top)*y};
+ setState(star, progress, mode='evolution') {
+  this.star=star;this.progress=clamp(Number(progress)||0,0,100);this.mode=mode;
+  this.updateLabels();this.requestDraw();
  }
- setState(id,preview){this.selected=id;this.preview=preview;if(this.canvas.closest('details')?.open&&performance.now()-this.lastDraw>115)this.draw();}
- plotStars(){const known=STARS.slice(0,9),added=STARS.slice(9);return known.concat(added.filter((s,i)=>i%Math.max(1,Math.ceil(added.length/750))===0&&s.temp>0&&s.luminosity>0)).concat(STARS.find(s=>s.id===this.selected)||[]);}
+ requestDraw() {
+  if (!this.details?.open || this.frame) return;
+  this.frame=requestAnimationFrame(()=>{this.frame=0;this.draw();});
+ }
+ updateLabels(){
+  const s=this.star,progress=this.progress,mode=this.mode;
+  const name=document.getElementById('hrStarName');
+  const stage=document.getElementById('hrStage');
+  const readout=document.getElementById('hrReading');
+  const hint=document.getElementById('hrHint');
+  if (!name||!stage||!readout||!hint) return;
+  name.textContent=s?.name||'Оберіть зорю';
+  if (!s) return;
+  if(mode==='solar'){
+   stage.textContent='Спостережувані параметри';
+   readout.textContent=s.temp>0&&s.luminosity>0?`T ≈ ${Math.round(s.temp).toLocaleString('uk-UA')} K · L ≈ ${formatValue(s.luminosity)} L☉`:'Немає достатніх даних';
+   hint.textContent='Одна зоря. Перейдіть до режиму «Еволюція зорі», щоб побачити її умовну траєкторію.';
+  }else if(s.track==='unknown'){
+   stage.textContent='Еволюційна схема недоступна';readout.textContent='Немає достовірних параметрів для моделювання';
+   hint.textContent='Без визначеного типу зорі траєкторія не будується. Не підмінюємо відсутні дані вигаданими.';
+  }else{
+   const track=getTrack(s),point=track.findLast(p=>p.at<=progress)??track[0];
+   const seq=sampleEvolutionPath(s,progress,2);
+   stage.textContent=`${point.stage} · ${progress.toFixed(1).replace('.',',')}%`;
+   if(seq.length){const p=seq.at(-1);readout.textContent=`T ≈ ${Math.round(p.temp).toLocaleString('uk-UA')} K · L ≈ ${formatValue(p.luminosity)} L☉`;
+    hint.textContent='Суцільна лінія — пройдений шлях; пунктир — можливе продовження. Усі точки належать обраній зорі.';
+   }else{readout.textContent='До формування зорі: H–R координати ще не визначені';hint.textContent='Газопилова хмара ще не є сформованою зорею. Траєкторія почнеться зі стадії протозорі.';}
+  }
+ }
+ axes(){return AXES[this.star?.track]||AXES.solar;}
+ point(T,L,w,h){
+  const {loT,hiT,loL,hiL}=this.axes(),l=46,r=w-14,t=13,b=h-33;
+  const x=(Math.log10(hiT)-Math.log10(clamp(T,loT,hiT)))/(Math.log10(hiT)-Math.log10(loT));
+  const y=(Math.log10(hiL)-Math.log10(clamp(L,loL,hiL)))/(Math.log10(hiL)-Math.log10(loL));
+  return {x:l+x*(r-l),y:t+y*(b-t)};
+ }
  draw(){
-  if(!this.canvas.closest('details')?.open)return;this.lastDraw=performance.now();
-  const canvas=this.canvas,box=canvas.getBoundingClientRect(),w=Math.max(240,box.width||280),h=Math.max(190,box.height||220),dpr=Math.min(window.devicePixelRatio||1,2);
+  if(!this.details?.open||!this.star)return;
+  const canvas=this.canvas,box=canvas.getBoundingClientRect();
+  const w=Math.max(200,box.width||280),h=Math.max(180,box.height||240),dpr=Math.min(window.devicePixelRatio||1,2);
   canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
   const c=this.ctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
-  const l=39,r=w-12,t=19,b=h-32;
-  c.fillStyle='#0a1426';c.fillRect(l,t,r-l,b-t);
-  const gradient=c.createLinearGradient(l,0,r,0);gradient.addColorStop(0,'rgba(112,151,255,.09)');gradient.addColorStop(.5,'rgba(243,235,176,.03)');gradient.addColorStop(1,'rgba(255,103,76,.1)');c.fillStyle=gradient;c.fillRect(l,t,r-l,b-t);
-  c.font='10px Inter,Segoe UI,Arial,sans-serif';c.textBaseline='middle';
-  for(const lum of [1e-5,.001,.1,10,1000,100000]){
-   const p=this.point(5800,lum,w,h);c.strokeStyle='rgba(140,163,207,.12)';c.beginPath();c.moveTo(l,p.y);c.lineTo(r,p.y);c.stroke();
-   c.textAlign='right';c.fillStyle='#8c9db6';c.fillText(lum<1?lum.toString():lum.toLocaleString('en'),l-6,p.y);
+  const l=46,r=w-14,t=13,b=h-33;const a=this.axes();
+  c.fillStyle='#08152b';c.fillRect(l,t,r-l,b-t);
+  const bg=c.createLinearGradient(l,0,r,0);bg.addColorStop(0,'rgba(86,136,255,.12)');bg.addColorStop(.55,'rgba(180,196,245,.025)');bg.addColorStop(1,'rgba(249,119,76,.10)');c.fillStyle=bg;c.fillRect(l,t,r-l,b-t);
+  const logTicks=(lo,hi)=>{const ticks=[];for(let exp=Math.ceil(Math.log10(lo));exp<=Math.floor(Math.log10(hi));exp++)ticks.push(10**exp);return ticks;};
+  c.font='10px Segoe UI,Arial,sans-serif';c.textBaseline='middle';
+  for(const lum of logTicks(a.loL,a.hiL)){
+   const p=this.point(a.loT,lum,w,h);c.strokeStyle='rgba(144,179,220,.15)';c.lineWidth=.8;c.beginPath();c.moveTo(l,p.y);c.lineTo(r,p.y);c.stroke();
+   c.textAlign='right';c.fillStyle='#a9c5e1';
+   c.fillText(lum>=1000?`${(lum/1000).toLocaleString('uk-UA')}k`:lum>=1?`${lum}`:lum.toExponential(0).replace('e','·10^'),l-5,p.y);
   }
-  for(const temp of [3000,6000,10000,30000]){
-   const p=this.point(temp,1,w,h);c.strokeStyle='rgba(140,163,207,.1)';c.beginPath();c.moveTo(p.x,t);c.lineTo(p.x,b);c.stroke();
-   c.textAlign='center';c.fillStyle='#9aaccc';c.fillText((temp/1000)+'k',p.x,b+12);
+  const logLo=Math.log10(a.loT),logHi=Math.log10(a.hiT);
+  const xticks=[3000,5000,10000,30000,100000,300000].filter(T=>T>=a.loT&&T<=a.hiT);
+  for(const temp of xticks){const p=this.point(temp,1,w,h);
+   c.strokeStyle='rgba(144,179,220,.12)';c.beginPath();c.moveTo(p.x,t);c.lineTo(p.x,b);c.stroke();
+   c.fillStyle='#acc5e7';c.textAlign='center';c.fillText(temp>=1000?`${temp/1000}k`:`${temp}`,p.x,b+13);
   }
-  // Бліда смуга головної послідовності (схематично).
-  c.save();c.beginPath();for(let i=0;i<=80;i++){
-   const s=i/80,T=35000*Math.pow(3000/35000,s),lum=130000*Math.pow(.00008/130000,s);
-   const p=this.point(T,lum,w,h);if(i===0)c.moveTo(p.x,p.y);else c.lineTo(p.x,p.y);
-  }c.strokeStyle='rgba(111,155,240,.20)';c.lineWidth=16;c.stroke();c.restore();
-  c.fillStyle='#667fa4';c.textAlign='left';c.font='9px Inter,Arial';c.fillText('НАДГІГАНТИ',l+8,t+13);c.fillText('БІЛІ КАРЛИКИ',l+8,b-9);
-  for(const s of this.plotStars()){if(!(s.temp>0&&s.luminosity>0))continue;const p=this.point(s.temp,s.luminosity,w,h),active=s.id===this.selected;
-   c.beginPath();c.arc(p.x,p.y,active?5.3:3,0,Math.PI*2);c.fillStyle=s.color;c.fill();
-   if(active){c.beginPath();c.arc(p.x,p.y,9.3,0,Math.PI*2);c.strokeStyle='#ffffff';c.lineWidth=1.4;c.stroke();}
+  c.save();c.textAlign='center';c.fillStyle='#bdd4ec';c.font='10px Segoe UI,Arial';
+  c.fillText('Температура, K  ← зростає', (l+r)/2,h-7);
+  c.translate(12,(t+b)/2);c.rotate(-Math.PI/2);c.fillText('Світність, L☉ (лог.)',0,0);c.restore();
+  // Only selected star. On the Solar System tab show its current measured/estimated catalogue point.
+  if(this.mode==='solar'){
+   if(this.star.temp>0&&this.star.luminosity>0){this.paintCurrent(c,this.point(this.star.temp,this.star.luminosity,w,h),this.star.color||'#ffda90');}
+   else this.paintNoPath(c,w,h,'Для цієї зорі немає температури / світності');
+   return;
   }
-  if(this.preview&&this.preview.temp>0&&this.preview.luminosity>0){const p=this.point(this.preview.temp,this.preview.luminosity,w,h);
-   c.beginPath();c.arc(p.x,p.y,7,0,Math.PI*2);c.strokeStyle='#66e1f6';c.lineWidth=2;c.stroke();
+  if(this.star.track==='unknown') {this.paintNoPath(c,w,h,'Еволюційні дані відсутні');return;}
+  const all=sampleEvolutionPath(this.star,100,200),past=sampleEvolutionPath(this.star,this.progress,200);
+  if(!past.length){this.paintNoPath(c,w,h,'Формування зорі: початок треку попереду');return;}
+  const stroke=(points,color,width,dash=[])=>{
+   if(points.length<2)return;
+   c.save();c.beginPath();points.forEach((p,i)=>{const s=this.point(p.temp,p.luminosity,w,h);i?c.lineTo(s.x,s.y):c.moveTo(s.x,s.y);});
+   c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.setLineDash(dash);c.stroke();c.restore();
+  };
+  // Future is deliberately dashed and subdued, because it is a hypothetical pedagogical branch.
+  stroke(all,'rgba(135,178,235,.26)',2,[4,5]);
+  stroke(past,'rgba(50,160,246,.20)',9);
+  const grad=c.createLinearGradient(l,t,r,b);grad.addColorStop(0,'#8fd0ff');grad.addColorStop(.52,'#5aa9ff');grad.addColorStop(1,'#ffb983');
+  stroke(past,grad,3.2);
+  for(const point of getTrack(this.star).filter(s=>s.visual!=='cloud'&&s.at<=this.progress+1e-8)){
+   const p=this.point(point.temp,point.luminosity,w,h);c.beginPath();c.arc(p.x,p.y,2.4,0,Math.PI*2);c.fillStyle='#e1f4ff';c.fill();
   }
-  c.font='10px Inter,Arial';c.fillStyle='#aec0d8';c.textAlign='center';c.fillText('Температура поверхні, K → нижча',l+(r-l)/2,h-5);
-  c.save();c.translate(11,(t+b)/2);c.rotate(-Math.PI/2);c.fillText('Світність L☉ (лог.)',0,0);c.restore();
+  const curr=past.at(-1);this.paintCurrent(c,this.point(curr.temp,curr.luminosity,w,h),this.star.color||'#8fd9ff');
+ }
+ paintNoPath(c,w,h,label){c.font='11px Segoe UI,Arial';c.fillStyle='#b5cbe3';c.textAlign='center';c.fillText(label,Math.round((46+w-14)/2),Math.round((13+h-33)/2));}
+ paintCurrent(c,p,color){
+  c.save();const halo=c.createRadialGradient(p.x,p.y,2,p.x,p.y,18);halo.addColorStop(0,'rgba(255,255,255,.5)');halo.addColorStop(1,'rgba(70,181,255,0)');c.fillStyle=halo;c.beginPath();c.arc(p.x,p.y,18,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(p.x,p.y,6.1,0,Math.PI*2);c.fillStyle=color;c.fill();c.lineWidth=2;c.strokeStyle='#fff';c.stroke();
+  c.beginPath();c.arc(p.x,p.y,11,0,Math.PI*2);c.strokeStyle='rgba(115,225,255,.6)';c.lineWidth=1.2;c.stroke();c.restore();
  }
 }

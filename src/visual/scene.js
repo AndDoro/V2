@@ -2,6 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.m
 import { PLANETS } from '../data/planets.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const LIGHTWEIGHT=window.matchMedia('(max-width:730px)').matches || (navigator.hardwareConcurrency>0&&navigator.hardwareConcurrency<=4);
 function rng(seed){return ()=>((seed=(Math.imul(seed,1664525)+1013904223)|0)>>>0)/4294967296;}
 function valueNoise(x,y,seed){
  const ix=Math.floor(x),iy=Math.floor(y), fx=x-ix,fy=y-iy;
@@ -11,7 +12,7 @@ function valueNoise(x,y,seed){
 }
 function fractal(x,y,seed){let out=0,amp=.55,freq=1;for(let i=0;i<4;i++){out+=amp*valueNoise(x*freq,y*freq,seed+i*13);freq*=2;amp*=.52;}return out;}
 function makePlanetTexture(p){
- const w=640,h=320, canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+ const w=LIGHTWEIGHT?320:640,h=LIGHTWEIGHT?160:320, canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
  const ctx=canvas.getContext('2d',{willReadFrequently:true}), img=ctx.createImageData(w,h);const seed=1357+p.id.length*73;
  const rgb=(a,b,t)=>a.map((n,i)=>Math.round(n+(b[i]-n)*t));
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
@@ -86,7 +87,7 @@ export class StarScene{
   this.visualKind='main';this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#020611');
   this.scene.fog=new THREE.FogExp2('#020611',.0014);
   this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-  this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.8));this.renderer.outputColorSpace=THREE.SRGBColorSpace;
+  this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,LIGHTWEIGHT?1.25:1.8));this.renderer.outputColorSpace=THREE.SRGBColorSpace;
   this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.45;
   this.renderer.domElement.style.cssText='display:block;width:100%;height:100%;touch-action:none;';
   this.container.appendChild(this.renderer.domElement);
@@ -100,7 +101,7 @@ export class StarScene{
   this.lastTime=performance.now();this.raf=requestAnimationFrame(t=>this.animate(t));
  }
  buildSky(){
-  const random=rng(433), count=2800, pos=new Float32Array(count*3), col=new Float32Array(count*3);
+  const random=rng(433), count=LIGHTWEIGHT?1000:2800, pos=new Float32Array(count*3), col=new Float32Array(count*3);
   for(let i=0;i<count;i++){
    let theta=random()*Math.PI*2, phi=Math.acos(random()*2-1), rad=110+random()*95;
    pos[i*3]=Math.sin(phi)*Math.cos(theta)*rad;pos[i*3+1]=Math.cos(phi)*rad;pos[i*3+2]=Math.sin(phi)*Math.sin(theta)*rad;
@@ -120,15 +121,15 @@ export class StarScene{
  createSun(){
   this.coreMaterial=makeSunMaterial();this.coronaMaterial=makeCoronaMaterial();
   this.starGroup=new THREE.Group();this.scene.add(this.starGroup);
-  this.core=new THREE.Mesh(new THREE.SphereGeometry(1,80,64),this.coreMaterial);this.starGroup.add(this.core);
-  this.corona=new THREE.Mesh(new THREE.SphereGeometry(1.18,64,48),this.coronaMaterial);this.starGroup.add(this.corona);
+  this.core=new THREE.Mesh(new THREE.SphereGeometry(1,LIGHTWEIGHT?48:80,LIGHTWEIGHT?32:64),this.coreMaterial);this.starGroup.add(this.core);
+  this.corona=new THREE.Mesh(new THREE.SphereGeometry(1.18,LIGHTWEIGHT?40:64,LIGHTWEIGHT?28:48),this.coronaMaterial);this.starGroup.add(this.corona);
   this.halo=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlowTexture(),color:'#ffbc70',transparent:true,opacity:.72,blending:THREE.AdditiveBlending,depthWrite:false}));this.starGroup.add(this.halo);
   this.setStarVisual({color:'#ffc977',radius:1,kind:'main',luminosity:1});
  }
  createEvolutionEffects(){
   // Дві окремі системи частинок для протозоряного диска й розсіяної туманності.
   const rand=rng(7234);
-  const nebCount=1700,nebPos=new Float32Array(nebCount*3),nebCol=new Float32Array(nebCount*3);
+  const nebCount=LIGHTWEIGHT?700:1700,nebPos=new Float32Array(nebCount*3),nebCol=new Float32Array(nebCount*3);
   for(let i=0;i<nebCount;i++){
    const theta=rand()*Math.PI*2,phi=Math.acos(2*rand()-1),r=2.0+Math.pow(rand(),.65)*5.2;
    nebPos[3*i]=Math.sin(phi)*Math.cos(theta)*r;
@@ -140,7 +141,7 @@ export class StarScene{
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(nebPos,3));geometry.setAttribute('color',new THREE.BufferAttribute(nebCol,3));
   this.nebula=new THREE.Points(geometry,new THREE.PointsMaterial({size:.18,vertexColors:true,transparent:true,opacity:.75,depthWrite:false,blending:THREE.AdditiveBlending}));
   this.scene.add(this.nebula);this.nebula.visible=false;
-  const diskCount=1100,diskPos=new Float32Array(diskCount*3),diskCol=new Float32Array(diskCount*3);
+  const diskCount=LIGHTWEIGHT?450:1100,diskPos=new Float32Array(diskCount*3),diskCol=new Float32Array(diskCount*3);
   for(let i=0;i<diskCount;i++){
    const a=rand()*Math.PI*2,r=1.3+rand()*5.4;
    diskPos[3*i]=Math.cos(a)*r;diskPos[3*i+1]=(rand()-.5)*.3;diskPos[3*i+2]=Math.sin(a)*r;
@@ -151,7 +152,7 @@ export class StarScene{
   this.scene.add(this.disk);this.disk.visible=false;
   // Own procedural material and particle systems: no third-party art assets.
   this.plasma=new THREE.Group();this.scene.add(this.plasma);
-  const flareCount=1150,flarePos=new Float32Array(flareCount*3),flareColors=new Float32Array(flareCount*3);
+  const flareCount=LIGHTWEIGHT?500:1150,flarePos=new Float32Array(flareCount*3),flareColors=new Float32Array(flareCount*3);
   for(let i=0;i<flareCount;i++){
    const a=rand()*Math.PI*2,z=rand()*2-1,rr=Math.sqrt(1-z*z),radius=1.03+rand()*.24;
    flarePos[i*3]=Math.cos(a)*rr*radius;flarePos[i*3+1]=z*radius;flarePos[i*3+2]=Math.sin(a)*rr*radius;
@@ -173,7 +174,7 @@ export class StarScene{
  }
  createSystem(){
   this.system=new THREE.Group();this.scene.add(this.system);this.planets=[];this.pickMeshes=[];
-  const geo=new THREE.SphereGeometry(1,64,42);const cloudTex=makeCloudTexture();
+  const geo=new THREE.SphereGeometry(1,LIGHTWEIGHT?40:64,LIGHTWEIGHT?28:42);const cloudTex=makeCloudTexture();
   for(const [i,p] of PLANETS.entries()){
    const orbit=orbitLine(p.visualDistance,'#627eae',i<4?.31:.23);this.system.add(orbit);
    const pivot=new THREE.Group();pivot.rotation.y=i*.68+.4;this.system.add(pivot);
