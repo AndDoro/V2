@@ -248,6 +248,7 @@ $('toggleDock').addEventListener('click',()=>{
  $('toggleDock').setAttribute('aria-expanded',String(!collapsed));
  $('toggleDock').setAttribute('aria-label',collapsed?'Розгорнути панель керування':'Згорнути панель керування');
  $('toggleDock').title=collapsed?'Розгорнути панель':'Згорнути панель';
+ $('toggleDock').textContent=collapsed?'⌄':'⌃';
 });
 $('viewport').addEventListener('pointerdown',()=>{if(window.innerWidth<=730)setMobilePane(null);});
 window.matchMedia('(min-width: 731px)').addEventListener('change',e=>{if(e.matches){setMobilePane(null);closeMobileMenu();}});

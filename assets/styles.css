@@ -207,13 +207,11 @@
 @media(min-width:1200px){.workspace:has(#hrDetails[open]) .camera-controls{left:auto;right:355px;top:194px}}
 @media(min-width:731px) and (max-width:1199px){.workspace:has(#hrDetails[open]) .camera-controls{top:185px;left:17px;right:auto;transform:scale(.83);transform-origin:top left}}
 
-/* The life-cycle / orbit control panel can be folded into a compact title bar. */
-.dock-toggle{display:flex;align-items:center;gap:9px;min-width:0;max-width:100%;padding:5px 7px;margin:-5px -7px;border:1px solid transparent;border-radius:9px;background:transparent;color:inherit;text-align:left;cursor:pointer}
-.dock-toggle:hover{background:rgba(96,159,224,.13);border-color:rgba(118,175,230,.30)}
-.dock-label{display:block;min-width:0}
-.dock-label .dock-overline,.dock-label strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dock-chevron{flex:none;color:#b7dfff;font-size:20px;line-height:1;transition:transform .18s ease;transform:rotate(0)}
+/* A small dedicated collapse button leaves the panel heading looking like text. */
+.dock-heading{min-width:0}
+.dock-heading .dock-overline,.dock-heading strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-collapse{flex:0 0 30px;width:30px;height:36px;display:grid;place-items:center;border:1px solid rgba(112,165,219,.55);border-radius:9px;background:rgba(33,68,106,.85);color:#d4eeff;font-size:19px;line-height:1;cursor:pointer}
+.dock-collapse:hover{background:#316caa;border-color:#b4dcff}
 .bottom-dock.is-collapsed{width:min(330px,calc(100% - 40px));min-width:0;padding-top:13px;padding-bottom:13px}
-.bottom-dock.is-collapsed .dock-content,.bottom-dock.is-collapsed .dock-actions{display:none}
-.bottom-dock.is-collapsed .dock-chevron{transform:rotate(180deg)}
-@media(max-width:730px){.dock-toggle{gap:5px}.dock-chevron{font-size:18px}.bottom-dock.is-collapsed{width:min(300px,calc(100% - 20px));padding-top:12px;padding-bottom:12px}}
+.bottom-dock.is-collapsed .dock-content,.bottom-dock.is-collapsed .dock-actions>:not(.dock-collapse){display:none}
+@media(max-width:730px){.dock-collapse{flex-basis:28px;width:28px;height:34px;font-size:17px}.bottom-dock.is-collapsed{width:min(300px,calc(100% - 20px));padding-top:12px;padding-bottom:12px}}

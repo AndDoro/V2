@@ -49,7 +49,7 @@ test('The life-cycle panel collapses and expands on desktop and phone',async t=>
   await toggle.click();
   assert.equal(await toggle.getAttribute('aria-expanded'),'false');
   assert.equal(await content.isVisible(),false);
-  assert.equal(await page.locator('.dock-actions').isVisible(),false);
+  assert.equal(await page.locator('#playButton').isVisible(),false);
   assert.equal(await toggle.isVisible(),true);
 
   // Pressing Space must click the focused button, not trigger playback.

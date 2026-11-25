@@ -14,7 +14,7 @@ test('dock toggle is accessible and preserves the ability to reopen',()=>{
  assert.match(html,/id="toggleDock"[^>]*aria-expanded="true"[^>]*aria-controls="dockContent"/);
  assert.match(html,/class="dock-content" id="dockContent"/);
  assert.match(css,/\.bottom-dock\.is-collapsed \.dock-content[^\{]*\{display:none\}/);
- assert.match(css,/\.bottom-dock\.is-collapsed \.dock-actions[^\{]*\{display:none\}/);
+ assert.match(css,/\.bottom-dock\.is-collapsed \.dock-actions>:not\(\.dock-collapse\)[^\{]*\{display:none\}/);
  const match=app.match(/\$\('toggleDock'\)\.addEventListener\('click',\(\)=>\{([\s\S]*?)\n\}\);/);
  assert.ok(match,'the toggle must have an actual click handler');
  const classes=new Set(),attributes=new Map();
@@ -25,8 +25,10 @@ test('dock toggle is accessible and preserves the ability to reopen',()=>{
  assert.ok(classes.has('is-collapsed'));
  assert.equal(attributes.get('aria-expanded'),'false');
  assert.equal(attributes.get('aria-label'),'Розгорнути панель керування');
+ assert.equal(button.textContent,'⌄');
  handler();
  assert.ok(!classes.has('is-collapsed'));
  assert.equal(attributes.get('aria-expanded'),'true');
  assert.equal(attributes.get('aria-label'),'Згорнути панель керування');
+ assert.equal(button.textContent,'⌃');
 });
