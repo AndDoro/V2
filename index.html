@@ -11,7 +11,6 @@
 <body>
 <div class="application" id="app">
   <aside class="sidebar" id="sidebar">
-    <div class="brand"><div class="brand-mark"><span></span></div><div><span class="brand-name">АСТРО<span>СФЕРА</span></span><div class="brand-subtitle">ІНТЕРАКТИВНА ЛАБОРАТОРІЯ ВСЕСВІТУ</div></div></div>
     <div class="sidebar-heading"><span>БІБЛІОТЕКА ЗІР</span><span class="count-pill" id="starCount">9 ОБ’ЄКТІВ</span></div>
     <div class="search-box"><span class="search-icon">⌕</span><input id="searchStars" type="search" placeholder="Знайти зорю..." autocomplete="off" aria-label="Пошук зорі"><kbd>/</kbd></div>
     <div class="filters" id="starFilters" aria-label="Фільтри зір"><button class="filter active" data-filter="all">Усі</button><button class="filter" data-filter="named">Іменовані</button><button class="filter" data-filter="main">Головна посл.</button><button class="filter" data-filter="giant">Гіганти</button><button class="filter" data-filter="remnant">Залишки</button></div>
@@ -33,7 +32,7 @@
       <button type="button" class="mobile-quick" data-pane="hr" aria-pressed="false" aria-label="Діаграма Герцшпрунга—Рассела">▤ <span>H–R</span></button>
       <button type="button" class="mobile-quick" data-pane="camera" aria-pressed="false" aria-label="Керування 3D-камерою">✥ <span>Камера</span></button>
     </nav>
-    <div class="headline"><div class="eyebrow" id="sceneEyebrow">ДОСЛІДЖУЙ КОСМОС</div><h1 id="sceneTitle">Наша Сонячна система<span class="headline-point">.</span></h1><p id="sceneSubtitle">Сонце, вісім планет та їхні орбіти в інтерактивному 3D-просторі.</p></div>
+    <div class="headline"><div class="eyebrow" id="sceneEyebrow">ДОСЛІДЖУЙ КОСМОС</div><h1 id="sceneTitle">Наша Сонячна система<span class="headline-point">.</span></h1></div>
     <div class="scene-help"><span>↔ Перетягування: огляд</span><span>◉ Колесо: масштаб</span><span>✧ Клік: вибір об’єкта</span></div>
     <div class="camera-controls" aria-label="Керування 3D-сценою"><div class="control-heading">КЕРУВАННЯ 3D</div><div class="camera-buttons"><button id="rotateLeft" aria-label="Повернути камеру вліво" title="Повернути вліво">↶</button><button id="zoomIn" aria-label="Наблизити" title="Наблизити">＋</button><button id="zoomOut" aria-label="Віддалити" title="Віддалити">−</button><button id="rotateRight" aria-label="Повернути вправо" title="Повернути вправо">↷</button><button id="cameraHome" aria-label="Повернути початковий ракурс" title="Початковий ракурс">⌂</button></div><span>Миша · дотик · кнопки</span></div>
     <div class="planet-strip" id="planetStrip" aria-label="Планети Сонячної системи"></div>
@@ -50,13 +49,14 @@
       <p class="hr-disclaimer">Еволюція схематична, не індивідуальний науковий прогноз.</p>
     </details></div>
     <section class="bottom-dock" id="bottomDock">
-      <div class="dock-head"><div class="dock-heading"><span class="dock-overline" id="dockOverline">ОРБІТАЛЬНА СИМУЛЯЦІЯ</span><strong id="dockTitle">Рух планет</strong></div><div class="dock-actions"><button type="button" class="mobile-scenario-toggle hidden" id="mobileScenarioToggle" aria-expanded="false" aria-controls="stageNavigation">Етапи ▾</button><select class="evolution-speed hidden" id="evolutionSpeed" aria-label="Швидкість еволюційної анімації"><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select><button class="round-play" id="playButton" title="Пауза / відтворення" aria-label="Пауза або відтворення">❚❚</button><button class="subtle-button" id="resetButton">↺ <span>Спочатку</span></button></div></div>
+      <div class="dock-head"><button type="button" class="dock-heading dock-toggle" id="toggleDock" aria-expanded="true" aria-controls="dockContent" aria-label="Згорнути панель керування" title="Згорнути панель"><span class="dock-label"><span class="dock-overline" id="dockOverline">ОРБІТАЛЬНА СИМУЛЯЦІЯ</span><strong id="dockTitle">Рух планет</strong></span><span class="dock-chevron" aria-hidden="true">⌃</span></button><div class="dock-actions"><button type="button" class="mobile-scenario-toggle hidden" id="mobileScenarioToggle" aria-expanded="false" aria-controls="stageNavigation">Етапи ▾</button><select class="evolution-speed hidden" id="evolutionSpeed" aria-label="Швидкість еволюційної анімації"><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select><button class="round-play" id="playButton" title="Пауза / відтворення" aria-label="Пауза або відтворення">❚❚</button><button class="subtle-button" id="resetButton">↺ <span>Спочатку</span></button></div></div>
+      <div class="dock-content" id="dockContent">
       <div class="evolution-display hidden" id="evolutionDisplay"><span id="stageNumber">ЕТАП 1 / 7</span><strong id="stageName">Молекулярна хмара</strong><p id="stageDescription"></p></div>
       <div class="stage-navigation hidden" id="stageNavigation"><button id="prevStage" type="button" aria-label="Попередній етап">← Попередній</button><div class="stage-pips" id="stagePips" aria-label="Етапи еволюції"></div><button id="nextStage" type="button" aria-label="Наступний етап">Наступний →</button></div>
       <div class="slider-line" id="timelineRow"><div class="slider-caption"><label for="mainSlider" id="sliderLabel">ШВИДКІСТЬ ОБЕРТАННЯ</label><output class="slider-number" id="sliderValue" for="mainSlider">×1.0</output></div><input type="range" id="mainSlider" min="0" max="5" value="1" step="0.1"><div class="slider-endpoints" id="sliderEndpoints"><span>Пауза</span><span>Прискорення ×5</span></div></div>
       <details class="evolution-note hidden" id="evolutionNote"><summary>ⓘ Межі навчальної моделі</summary><p id="evolutionNoteText">Етапи умовні, нерівні за реальною тривалістю. Це навчальна схема, а не індивідуальний прогноз.</p></details>
+      </div>
     </section>
-    <div class="scale-note" id="scaleNote">Відстані, розміри та швидкості в 3D-сцені не збережені в одному масштабі.</div>
   </main>
 </div>
 <div class="overlay" id="mobileOverlay" hidden></div>

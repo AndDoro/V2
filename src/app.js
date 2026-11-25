@@ -135,14 +135,12 @@ function setMode(mode){
   state.star=STAR_BY_ID.sun;state.selectedPlanet=null;
   $('sceneEyebrow').textContent='ВІДКРИВАЙ НАШ КОСМОС';
   $('sceneTitle').innerHTML='Наша Сонячна система<span class="headline-point">.</span>';
-  $('sceneSubtitle').textContent='Сонце, вісім планет, орбіти та анімований космічний простір.';
   $('currentModeText').textContent='Сонячна система';$('dockOverline').textContent='РУХ ПЛАНЕТ';$('dockTitle').textContent='Орбітальна симуляція';
   $('sliderLabel').textContent='КОЕФІЦІЄНТ ШВИДКОСТІ';
   Object.assign($('mainSlider'),{min:'0',max:'5',step:'0.1',value:String(state.orbitSpeed)});
   $('sliderEndpoints').innerHTML='<span>Зупинено ×0</span><span>Прискорено ×5</span>';
   $('sliderValue').textContent='×'+state.orbitSpeed.toFixed(1).replace('.',',');
   $('planetStrip').classList.remove('hidden');$('evolutionDisplay').classList.add('hidden');$('evolutionNote').classList.add('hidden');$('evolutionSpeed').classList.add('hidden');$('stageNavigation').classList.add('hidden');
-  $('scaleNote').textContent='Розміри, відстані та тривалість обертів показані не в одному масштабі.';
   $('mobileScenarioToggle').classList.add('hidden');document.body.classList.remove('mobile-scenario-expanded');$('mobileScenarioToggle').setAttribute('aria-expanded','false');
   scene.setMode('solar');scene.setStarVisual(state.star);setPlayState(true);
   hr.setState(state.star,0,'solar');
@@ -150,13 +148,11 @@ function setMode(mode){
   const s=state.star;
   $('sceneEyebrow').textContent='НАВЧАЛЬНА МОДЕЛЬ ЕВОЛЮЦІЇ';
   $('sceneTitle').textContent=s.name+'.';
-  $('sceneSubtitle').textContent=`${s.spectral} · ${s.phase} · ${s.distance}`;
   $('currentModeText').textContent='Еволюція зорі';$('dockOverline').textContent='ЖИТТЄВИЙ ЦИКЛ';$('dockTitle').textContent='Навчальний сценарій';
   $('sliderLabel').textContent='УМОВНИЙ ПРОГРЕС';
   Object.assign($('mainSlider'),{min:'0',max:'100',step:'0.25',value:String(state.progress)});
   $('sliderEndpoints').innerHTML='<span>Початок формування</span><span>Умовний фінал</span>';
   $('planetStrip').classList.add('hidden');$('evolutionDisplay').classList.remove('hidden');$('evolutionNote').classList.remove('hidden');$('evolutionSpeed').classList.remove('hidden');$('stageNavigation').classList.remove('hidden');
-  $('scaleNote').textContent='Навчальний трек не є фізично точним прогнозом для цієї зорі.';
   $('mobileScenarioToggle').classList.remove('hidden');document.body.classList.remove('mobile-scenario-expanded');$('mobileScenarioToggle').setAttribute('aria-expanded','false');
   scene.setMode('evolution');buildStagePips();setPlayState(false);updateEvolution();
  }
@@ -247,6 +243,12 @@ $('mobileScenarioToggle').addEventListener('click',()=>{
  $('mobileScenarioToggle').setAttribute('aria-expanded',String(on));
  $('mobileScenarioToggle').textContent=on?'Згорнути ▴':'Етапи ▾';
 });
+$('toggleDock').addEventListener('click',()=>{
+ const collapsed=$('bottomDock').classList.toggle('is-collapsed');
+ $('toggleDock').setAttribute('aria-expanded',String(!collapsed));
+ $('toggleDock').setAttribute('aria-label',collapsed?'Розгорнути панель керування':'Згорнути панель керування');
+ $('toggleDock').title=collapsed?'Розгорнути панель':'Згорнути панель';
+});
 $('viewport').addEventListener('pointerdown',()=>{if(window.innerWidth<=730)setMobilePane(null);});
 window.matchMedia('(min-width: 731px)').addEventListener('change',e=>{if(e.matches){setMobilePane(null);closeMobileMenu();}});
 
@@ -273,6 +275,8 @@ $('hrDetails').addEventListener('toggle',()=>{
 document.addEventListener('keydown',e=>{
  if(e.target.matches('input,textarea,select')){if(e.key==='Escape')e.target.blur();return;}
  if(e.key==='/'){e.preventDefault();$('searchStars').focus();if(window.innerWidth<730)openMobileMenu();}
+ // Let Space activate focused buttons and links, including the dock's collapse toggle.
+ if(e.code==='Space'&&e.target.closest('button,a,summary,[role="button"]'))return;
  if(e.code==='Space'){e.preventDefault();togglePlay();}
  if(e.key==='ArrowLeft'&&state.mode==='evolution'){e.preventDefault();stepStage(-1);}
  if(e.key==='ArrowRight'&&state.mode==='evolution'){e.preventDefault();stepStage(1);}
